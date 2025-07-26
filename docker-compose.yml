@@ -1,0 +1,54 @@
+x-api-template:
+  api: &api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    volumes:
+      - ./api:/var/www/html
+    networks:
+      - backend
+      - payment-processor
+    # deploy:
+      # resources:
+        # limits:
+          # cpus: "0.1"
+          # memory: "50MB"
+    depends_on:
+      - redis
+
+services:
+
+  api1:
+    <<: *api
+    container_name: api1
+
+  api2:
+    <<: *api
+    container_name: api2
+
+  nginx:
+    image: openresty/openresty:1.25.3.1-1-bullseye
+    volumes:
+      - ./nginx/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+      - ./nginx/handler.lua:/usr/local/openresty/nginx/lua/handler.lua
+    ports:
+      - "9999:80"
+    depends_on:
+      - redis
+    networks:
+      - backend
+
+  redis:
+    image: redis:alpine3.20
+    container_name: redis
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+  payment-processor:
+    external: true
