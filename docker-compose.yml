@@ -1,10 +1,10 @@
-x-api-template:
-  api: &api
+x-worker-template:
+  worker: &worker
     build:
-      context: ./api
+      context: ./worker
       dockerfile: Dockerfile
     volumes:
-      - ./api:/var/www/html
+      - ./worker:/var/www/html
     networks:
       - backend
       - payment-processor
@@ -13,18 +13,16 @@ x-api-template:
         # limits:
           # cpus: "0.1"
           # memory: "50MB"
-    depends_on:
-      - redis
 
 services:
 
-  api1:
-    <<: *api
-    container_name: api1
+  worker1:
+    <<: *worker
+    container_name: worker1
 
-  api2:
-    <<: *api
-    container_name: api2
+  worker2:
+    <<: *worker
+    container_name: worker2
 
   nginx:
     image: openresty/openresty:1.25.3.1-1-bullseye
@@ -35,15 +33,6 @@ services:
       - "9999:80"
     depends_on:
       - redis
-    networks:
-      - backend
-
-  redis:
-    image: redis:alpine3.20
-    container_name: redis
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-    volumes:
-      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
       - backend
 
