@@ -31,8 +31,6 @@ services:
       - ./nginx/handler.lua:/usr/local/openresty/nginx/lua/handler.lua
     ports:
       - "9999:80"
-    depends_on:
-      - redis
     networks:
       - backend
 
