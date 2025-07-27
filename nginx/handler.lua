@@ -1,5 +1,4 @@
 local cjson = require "cjson.safe"
-local redis = require "resty.redis"
 
 -- Captura dados da requisição
 ngx.req.read_body()
@@ -15,30 +14,41 @@ local payload = {
 ngx.header.content_type = "application/json"
 ngx.status = ngx.HTTP_OK
 ngx.say('{"status":"OK","message":"Accepted"}')
+ngx.eof()
 
--- Timer em background com dados passados como arg
-ngx.timer.at(0.001, function(premature, payload)
+-- Envia dados para um worker em background
+ngx.timer.at(0, function(premature, data)
     if premature then return end
 
-    local red = redis:new()
-    red:set_timeout(100)
-
-    local ok, err = red:connect("redis", 6379)
-    if not ok then
-        ngx.log(ngx.ERR, "Redis connect failed: ", err)
-        return
-    end
-
-    local encoded = cjson.encode(payload)
-    if not encoded then
+    local ok, body = pcall(cjson.encode, data)
+    if not ok or not body then
         ngx.log(ngx.ERR, "JSON encode failed")
         return
     end
 
-    local ok, err = red:rpush("payments_queue", encoded)
+    local workers = {"worker1", "worker2"}
+    local host = workers[math.random(#workers)]
+
+    local sock = ngx.socket.tcp()
+    sock:settimeouts(100, 100, 1)
+
+    local ok, err = sock:connect(host, 80)
     if not ok then
-        ngx.log(ngx.ERR, "Redis RPUSH failed: ", err)
+        ngx.log(ngx.ERR, "failed to connect to worker: ", err)
+        return
     end
 
-    red:set_keepalive(60000, 100)
+    local req = "POST /process HTTP/1.1\r\n" ..
+                "Host: " .. host .. "\r\n" ..
+                "Content-Type: application/json\r\n" ..
+                "Content-Length: " .. #body .. "\r\n" ..
+                "Connection: close\r\n\r\n" ..
+                body
+
+    local bytes, err = sock:send(req)
+    if not bytes then
+        ngx.log(ngx.ERR, "failed to send request: ", err)
+    end
+
+    sock:close()
 end, payload)
