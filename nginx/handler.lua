@@ -26,7 +26,7 @@ ngx.timer.at(0, function(premature, data)
         return
     end
 
-    local workers = {"worker1", "worker2"}
+    local workers = {"worker1", "worker2", "worker3"}
     local host = workers[math.random(#workers)]
 
     local sock = ngx.socket.tcp()
