@@ -24,10 +24,15 @@ services:
     <<: *worker
     container_name: worker2
 
+  worker3:
+    <<: *worker
+    container_name: worker3
+
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    container_name: nginx
     volumes:
       - ./nginx/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
       - ./nginx/handler.lua:/usr/local/openresty/nginx/lua/handler.lua
